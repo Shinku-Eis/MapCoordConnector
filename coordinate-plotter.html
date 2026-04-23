@@ -109,6 +109,19 @@
             border: 2px solid white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
+        .coordinate-label {
+            background: rgba(255,255,255,0.95);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-family: monospace;
+            border: 1px solid #2196F3;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+        .coordinate-label:before {
+            border-right-color: #2196F3;
+        }
     </style>
 </head>
 <body>
@@ -174,11 +187,12 @@
                     
                     const marker = L.marker([lat, lng], { icon: createNumberedIcon(index + 1) })
                         .addTo(map)
-                        .bindPopup(`
-                            <b>点位 ${index + 1}</b><br>
-                            纬度: ${lat}<br>
-                            经度: ${lng}
-                        `);
+                        .bindTooltip(`#${index + 1} | ${lng.toFixed(4)}, ${lat.toFixed(4)}`, {
+                            permanent: true,
+                            direction: 'right',
+                            offset: [15, 0],
+                            className: 'coordinate-label'
+                        });
                     markers.push(marker);
                 }
             });
