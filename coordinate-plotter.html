@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>坐标地图可视化工具</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 350px;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ddd;
+        }
+        .sidebar h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .input-group textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .input-group small {
+            color: #666;
+            font-size: 12px;
+        }
+        .btn {
+            padding: 12px 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #1976D2;
+        }
+        .btn-clear {
+            background: #f44336;
+            margin-top: 10px;
+        }
+        .btn-clear:hover {
+            background: #d32f2f;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .stats h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .stats p {
+            font-size: 13px;
+            margin: 5px 0;
+            color: #666;
+        }
+        #map {
+            flex: 1;
+            height: 100vh;
+        }
+        .number-icon {
+            background: #2196F3;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>📍 坐标地图可视化工具</h1>
+        
+        <div class="input-group">
+            <label>输入经纬度坐标（每行一个）</label>
+            <textarea id="coordinates" placeholder="格式: 经度,纬度
+示例:
+116.4074,39.9042
+121.4737,31.2304
+113.2644,23.1291"></textarea>
+            <small>提示：每行输入一组坐标，格式：经度,纬度（如: 113.28,23.125）</small>
+        </div>
+        
+        <button class="btn" onclick="plotCoordinates()">绘制坐标并连线</button>
+        <button class="btn btn-clear" onclick="clearAll()">清除所有</button>
+        
+        <div class="stats">
+            <h3>📊 统计信息</h3>
+            <p>坐标点数：<span id="pointCount">0</span></p>
+            <p>连线数：<span id="lineCount">0</span></p>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+
+    <script>
+        const map = L.map('map').setView([35.8617, 104.1954], 4);
+        
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            subdomains: ['1', '2', '3', '4'],
+            attribution: '&copy; 高德地图 Amap',
+            maxZoom: 18
+        }).addTo(map);
+        
+        let markers = [];
+        let polyline = null;
+        
+        function createNumberedIcon(number) {
+            return L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="number-icon">${number}</div>`,
+                iconSize: [25, 25],
+                iconAnchor: [12, 12]
+            });
+        }
+        
+        function plotCoordinates() {
+            clearMarkers();
+            
+            const text = document.getElementById('coordinates').value;
+            const lines = text.trim().split('\n').filter(line => line.trim());
+            const points = [];
+            
+            lines.forEach((line, index) => {
+                const parts = line.split(',').map(p => parseFloat(p.trim()));
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    const lng = parts[0];
+                    const lat = parts[1];
+                    points.push([lat, lng]);
+                    
+                    const marker = L.marker([lat, lng], { icon: createNumberedIcon(index + 1) })
+                        .addTo(map)
+                        .bindPopup(`
+                            <b>点位 ${index + 1}</b><br>
+                            纬度: ${lat}<br>
+                            经度: ${lng}
+                        `);
+                    markers.push(marker);
+                }
+            });
+            
+            if (points.length > 1) {
+                polyline = L.polyline(points, {
+                    color: '#FF5722',
+                    weight: 3,
+                    opacity: 0.8,
+                    smoothFactor: 1
+                }).addTo(map);
+            }
+            
+            if (points.length > 0) {
+                const bounds = L.latLngBounds(points);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+            
+            updateStats(points.length);
+        }
+        
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            if (polyline) {
+                map.removeLayer(polyline);
+                polyline = null;
+            }
+        }
+        
+        function clearAll() {
+            clearMarkers();
+            document.getElementById('coordinates').value = '';
+            updateStats(0);
+        }
+        
+        function updateStats(count) {
+            document.getElementById('pointCount').textContent = count;
+            document.getElementById('lineCount').textContent = Math.max(0, count - 1);
+        }
+    </script>
+</body>
+</html>
